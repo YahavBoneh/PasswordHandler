@@ -1,2 +1,2 @@
 @ECHO OFF
-python "C:\Users\yahav\Google Drive\Custom\PsswrdHandler\Psswrd-TUI.py" %*
+python "C:\Users\yahav\Google Drive\PasswordHandlerProjectGit\PsswrdHandler\Psswrd-TUI.py" %*
