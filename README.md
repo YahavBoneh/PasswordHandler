@@ -11,5 +11,5 @@ Preparations:
 python "Full path to Psswrd-TUI.py here" %*
 
 For first encryption of the file use "pass encode". You will be asked for a key WHICH CAN'T BE RESTORED, so don't forget it.
-The commant "pass decode" will decoude the all file and should only be used to insert new fields or edit new ones, to get the information about <name> use "pass <name>".
+The commant "pass decode" will decode the all file and should only be used to insert new fields or edit new ones, to get the information about <name> use "pass <name>".
 For more information about the syntax use "pass help".
