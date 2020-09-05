@@ -27,7 +27,7 @@ except ImportError:
         sys.exit()
 
 
-data_path = r"C:\Users\yahav\Google Drive\Custom\PsswrdHandler\data.json"  # Path to the json file with the data here.
+data_path = r"C:\Users\yahav\Google Drive\Passwords\data.json"  # Path to the json file with the data here.
 
 help_message = """
 You are using PASSWORDS HANDLER TUI version 1.0-release.
