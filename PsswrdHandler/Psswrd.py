@@ -60,6 +60,34 @@ class PsswrdIncorrectKey(BaseException):
         return self.message
 
 
+class PsswrdDataFileDoesNotExist(BaseException):
+    """
+    Exception for the case the data file was not found.
+    """
+    def __init__(self):
+        self.message = "Data file not found in given path."
+
+    def __str__(self):
+        return self.message
+
+
+def does_path_exists(path):
+    """
+    Check if path exists or not.
+
+    :param path: path to file.
+    :type path: string.
+
+    :rtype: bool.
+    """
+    try:
+        with open(path, 'r') as f:
+            pass
+    except FileNotFoundError:
+        return False
+    return True
+
+
 def dict_to_json(d, j):
     """
     Saves dict info to a json file.
@@ -89,7 +117,7 @@ def json_to_dict(j):
 
     :rtype: python dictionary.
     """
-    with open(j, "r") as f:
+    with open(j, 'r') as f:
         return json.loads(f.read())
 
 
@@ -100,9 +128,8 @@ def generate_key(n):
     :param n: user's key.
     :type n: int.
 
-    @:rtype: string.
+    :rtype: string.
     """
-
     key = ''
     for i in range(FERNET_PASSWORD_LENGTH):
         key += VALUES[(n * i + i) % VALUES_LEN]  # Random way of transforming the original key to a key of the requested type.
@@ -121,18 +148,16 @@ def encrypt(j, n):
     :param n: key.
     :type n: int.
 
-    :raises PsswrdIncorrectKey: if the key is incorrect.
+    :raises FileNotFoundError: if the json file does not exists.
+    :raises ValueError: if a problem occurred with the key - should not happen.
     """
-    try:
-        key = generate_key(n)
-        with open(j, 'rb') as f:
-            data = f.read()
-        fernet = Fernet(key)
-        encrypted = fernet.encrypt(data)
-        with open(j, 'wb') as f:
-            f.write(encrypted)
-    except:
-        raise PsswrdIncorrectKey
+    key = generate_key(n)
+    with open(j, 'rb') as f:
+        data = f.read()
+    fernet = Fernet(key)
+    encrypted = fernet.encrypt(data)
+    with open(j, 'wb') as f:
+        f.write(encrypted)
 
 
 def decrypt(j, n):
@@ -145,18 +170,20 @@ def decrypt(j, n):
     :param n: key.
     :type n: int.
 
+    :raises FileNotFoundError: if the json file does not exists.
+    :raises ValueError: if a problem occurred with the key - should not happen.
     :raises PsswrdIncorrectKey: if key is incorrect.
     """
+    key = generate_key(n)
+    with open(j, 'rb') as f:
+        data = f.read()
+    fernet = Fernet(key)
     try:
-        key = generate_key(n)
-        with open(j, 'rb') as f:
-            data = f.read()
-        fernet = Fernet(key)
         decrypted = fernet.decrypt(data)
-        with open(j, 'wb') as f:
-            f.write(decrypted)
     except:
         raise PsswrdIncorrectKey
+    with open(j, 'wb') as f:
+        f.write(decrypted)
 
 
 class Psswrd:
@@ -190,7 +217,7 @@ class Psswrd:
         :type hide_all: bool
 
         :param f_get_key: function to get the key with.
-            * no parameters*
+            * takes no parameters*
 
             :rtype: string.
         :type f_get_key: function.
@@ -224,13 +251,13 @@ class Psswrd:
         self.hide_all_flag = hide_all
         self.f_get_key = f_get_key
         self.f_show_info = f_show_info
-        self.key = None  # Key is initialized to zero because we won't necessarily need to ask for it.
+        self.key = None  # Key is initialized to None because we won't necessarily need to ask for it.
 
     def __is_decoded(self):
         """
         Check if the json file is already decrypted.
 
-        rtype: bool.
+        :rtype: bool.
         """
         try:
             d = json_to_dict(self.data_file_path)
@@ -247,9 +274,6 @@ class Psswrd:
         :rtype: int.
         """
         try:
-            # temp = str(getpass.getpass("Key......."))
-            # temp = "".join([str(ord(i)) for i in temp])  # Converts every character to int and attach them.
-            # self.key = int(temp)
             temp = str(self.f_get_key())
             self.key = int("".join([str(ord(i)) for i in temp]))  # Converts every character to int and attach them.
         except:
@@ -260,18 +284,27 @@ class Psswrd:
         Return a dictionary from an encrypted json file.
 
         :raises PsswrdIncorrectKey: if the key is incorrect (i.e the file can't be decrypted with the given key).
+        :raises PsswrdDataFileDoesNotExist: if data file was not found.
 
         :rtype: python dictionary.
         """
         try:
             decrypt(self.data_file_path, self.key)
-        except PsswrdIncorrectKey:  # Key is incorrect if an exception has been raised by decrypt.
+        except PsswrdIncorrectKey:
             raise
+        except ValueError:  # Should not happen, but if happened than the user entered an incredibly illegal key which is obviously incorrect.
+            raise PsswrdIncorrectKey
+        except FileNotFoundError:
+            raise PsswrdDataFileDoesNotExist
+
         try:
             d = json_to_dict(self.data_file_path)
-        except PsswrdIncorrectKey:  # Key is incorrect if an exception has been raised by json_to_dict.
+        except FileNotFoundError:  # That case was already checked.
+            raise PsswrdDataFileDoesNotExist
+        except:  # Key is incorrect if other exception has been raised by json_to_dict.
             encrypt(self.data_file_path, self.key)  # If we got here the file has been incorrectly decrypted so the process should be reversed.
-            raise
+            raise PsswrdIncorrectKey
+
         return d
 
     def __encode(self):
@@ -279,25 +312,34 @@ class Psswrd:
         Encrypt the json file.
 
         :raises PsswrdEncrypted: if the file is already encrypted, meant to make sure the file is not double encrypted.
+        :raises PsswrdDataFileDoesNotExist: if the json file does not exists.
         """
         try:
             d = json_to_dict(self.data_file_path)
         except:  # If an exception is raised then the file is already encrypted.
             raise PsswrdEncrypted
-        encrypt(self.data_file_path, self.key)
+
+        try:
+            encrypt(self.data_file_path, self.key)
+        except FileNotFoundError:
+            raise PsswrdDataFileDoesNotExist
+        except ValueError:
+            raise PsswrdIncorrectKey
 
     def info(self):
         """
         Gives the user the requested information if possible.
 
-        :except: PsswrdEncrypted: if the user try to encrypt an encrypted file.
-
-        :except PsswrdInvalidKey: if the key consists of invalid characters.
-
-        :except PsswrdIncorrectKey: if the key is incorrect.
-
-        :except PsswrdNoSuchName: if the identifier name is unrecognisable.
+        :raises: PsswrdEncrypted: if the user try to encrypt an encrypted file.
+        :raises PsswrdDataFileDoesNotExist: if the json file does not exists.
+        :raises PsswrdInvalidKey: if the key consists of invalid characters.
+        :raises PsswrdIncorrectKey: if the key is incorrect.
+        :raises PsswrdNoSuchName: if the identifier name is unrecognisable.
         """
+
+        if not does_path_exists(self.data_file_path):
+            raise PsswrdDataFileDoesNotExist
+
         if self.__is_decoded() and self.decode:
             os.system(self.data_file_path)  # Decoding the whole file means a change has to be done, so the file is automatically opened.
             return
@@ -313,7 +355,7 @@ class Psswrd:
         d = self.__decode()  # We decode the file even if it is not the only purpose because we will need the data anyway.
 
         if self.decode:  # In case decoding the file is the sole purpose of the operation.
-            os.system(self.data_file_path)  # Decoding the whole file means a change has to be done, so the file is automatically opened.
+            os.system("\"" + self.data_file_path + "\"")  # Decoding the whole file means a change has to be done, so the file is automatically opened.
             return
 
         try:
