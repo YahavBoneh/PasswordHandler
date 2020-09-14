@@ -31,17 +31,14 @@ data_path = r"C:\Users\yahav\Google Drive\Passwords\data.json"  # Path to the js
 
 help_message = """
 You are using PASSWORDS HANDLER TUI version 1.0-release.
-
 pass help               Provides information on how to use the program.
 pass decode             Decodes the data file. You will be asked for the key.
 pass encode             Encodes the data file. You will be asked for the key.
 pass <name>             Prints all the saved information about name. You will be asked for the key.
-
 Additional flags:
 -hp                     Hide password.
 -ha                     Hide all.
 -c                      Copy password.
-
 If you forgot your password that's a bummer.
 """
 
